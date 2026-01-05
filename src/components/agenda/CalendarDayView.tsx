@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { format, setHours, setMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarEvent } from "./CalendarEvent";
@@ -16,10 +16,11 @@ interface CalendarDayViewProps {
   openingTime?: string;
   closingTime?: string;
   timezone?: string;
+  isCompactMode?: boolean;
 }
 
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7:00 to 20:00
-const HOUR_HEIGHT = 96; // h-24 = 6rem = 96px
+const DEFAULT_HOUR_HEIGHT = 96;
+const MIN_HOUR_HEIGHT = 40;
 
 export function CalendarDayView({
   currentDate,
@@ -31,6 +32,7 @@ export function CalendarDayView({
   openingTime,
   closingTime,
   timezone,
+  isCompactMode = false,
 }: CalendarDayViewProps) {
   const activeBarbers = useMemo(
     () => barbers.filter(b => b.is_active && (!selectedBarberId || b.id === selectedBarberId)),
@@ -43,6 +45,43 @@ export function CalendarDayView({
   // Parse opening and closing hours
   const openingHour = openingTime ? parseInt(openingTime.split(":")[0], 10) : 7;
   const closingHour = closingTime ? parseInt(closingTime.split(":")[0], 10) : 21;
+
+  // Generate hours array based on business hours in compact mode
+  const HOURS = useMemo(() => {
+    if (isCompactMode) {
+      return Array.from({ length: closingHour - openingHour }, (_, i) => i + openingHour);
+    }
+    return Array.from({ length: 14 }, (_, i) => i + 7);
+  }, [isCompactMode, openingHour, closingHour]);
+
+  // Calculate dynamic height for compact mode
+  const [containerHeight, setContainerHeight] = useState(0);
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) {
+      const updateHeight = () => setContainerHeight(node.clientHeight);
+      updateHeight();
+      const observer = new ResizeObserver(updateHeight);
+      observer.observe(node);
+      return () => observer.disconnect();
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const container = document.querySelector('[data-calendar-day-container]');
+      if (container) setContainerHeight(container.clientHeight);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const headerHeight = 64;
+  const hourHeight = useMemo(() => {
+    if (!isCompactMode) return DEFAULT_HOUR_HEIGHT;
+    const availableHeight = containerHeight - headerHeight;
+    const calculatedHeight = Math.floor(availableHeight / HOURS.length);
+    return Math.max(MIN_HOUR_HEIGHT, calculatedHeight);
+  }, [isCompactMode, containerHeight, HOURS.length]);
 
   const appointmentsByBarberAndHour = useMemo(() => {
     const map: Record<string, Record<number, Appointment[]>> = {};
@@ -63,22 +102,31 @@ export function CalendarDayView({
     });
 
     return map;
-  }, [appointments, activeBarbers]);
+  }, [appointments, activeBarbers, HOURS]);
 
   // Calculate current time indicator position
-  const showTimeIndicator = today && currentHour >= 7 && currentHour < 21;
-  const timeIndicatorPosition = (currentHour - 7) * HOUR_HEIGHT + (currentMinute / 60) * HOUR_HEIGHT;
+  const firstHour = HOURS[0];
+  const lastHour = HOURS[HOURS.length - 1];
+  const showTimeIndicator = today && currentHour >= firstHour && currentHour < lastHour + 1;
+  const timeIndicatorPosition = (currentHour - firstHour) * hourHeight + (currentMinute / 60) * hourHeight;
 
   const isWithinBusinessHours = (hour: number) => {
     return hour >= openingHour && hour < closingHour;
   };
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className={`min-w-[600px] ${activeBarbers.length > 3 ? "min-w-[900px]" : ""}`}>
+    <div 
+      ref={containerRef}
+      data-calendar-day-container
+      className={`flex-1 ${isCompactMode ? 'overflow-hidden' : 'overflow-auto'}`}
+    >
+      <div className={`min-w-[600px] ${activeBarbers.length > 3 ? "min-w-[900px]" : ""} h-full flex flex-col`}>
         {/* Header with barbers */}
-        <div className={`grid border-b border-border sticky top-0 bg-card z-10`} style={{ gridTemplateColumns: `80px repeat(${activeBarbers.length}, 1fr)` }}>
-          <div className="p-3 text-center border-r border-border">
+        <div 
+          className="grid border-b border-border sticky top-0 bg-card z-10 shrink-0" 
+          style={{ gridTemplateColumns: `80px repeat(${activeBarbers.length}, 1fr)`, height: headerHeight }}
+        >
+          <div className="p-3 text-center border-r border-border flex flex-col items-center justify-center">
             <p className="text-sm text-muted-foreground capitalize">
               {format(currentDate, "EEEE", { locale: ptBR })}
             </p>
@@ -89,7 +137,7 @@ export function CalendarDayView({
           {activeBarbers.map(barber => (
             <div
               key={barber.id}
-              className="p-3 text-center border-r border-border last:border-r-0"
+              className="p-3 text-center border-r border-border last:border-r-0 flex items-center justify-center"
               style={{ borderTop: `3px solid ${barber.calendar_color || "#FF6B00"}` }}
             >
               <p className="font-semibold text-foreground">{barber.name}</p>
@@ -98,7 +146,7 @@ export function CalendarDayView({
         </div>
 
         {/* Time slots */}
-        <div className="grid relative" style={{ gridTemplateColumns: `80px repeat(${activeBarbers.length}, 1fr)` }}>
+        <div className={`grid relative ${isCompactMode ? 'flex-1' : ''}`} style={{ gridTemplateColumns: `80px repeat(${activeBarbers.length}, 1fr)` }}>
           {/* Current time indicator - spans across all columns */}
           {showTimeIndicator && (
             <div
@@ -117,9 +165,10 @@ export function CalendarDayView({
             {HOURS.map(hour => (
               <div
                 key={hour}
-                className={`h-24 border-b border-border flex items-start justify-end pr-2 pt-1 ${
+                className={`border-b border-border flex items-start justify-end pr-2 pt-1 ${
                   isWithinBusinessHours(hour) ? "bg-blue-100/40 dark:bg-blue-900/20" : ""
                 }`}
+                style={{ height: hourHeight }}
               >
                 <span className="text-sm text-muted-foreground">
                   {String(hour).padStart(2, "0")}:00
@@ -139,11 +188,12 @@ export function CalendarDayView({
                 return (
                   <div
                     key={hour}
-                    className={`h-24 border-b border-border p-1 cursor-pointer hover:bg-muted/30 transition-colors ${
+                    className={`border-b border-border p-1 cursor-pointer hover:bg-muted/30 transition-colors ${
                       withinHours 
                         ? "bg-blue-100/40 dark:bg-blue-900/20" 
                         : ""
                     } ${today && withinHours ? "bg-blue-100/50 dark:bg-blue-900/30" : ""}`}
+                    style={{ height: hourHeight }}
                     onClick={() => onSlotClick(slotDate, barber.id)}
                   >
                     <div className="space-y-1 overflow-hidden h-full">

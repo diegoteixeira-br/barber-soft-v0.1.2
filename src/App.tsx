@@ -40,11 +40,14 @@ import LGPD from "./pages/institucional/LGPD";
 
 const queryClient = new QueryClient();
 
+import AgendaDisplay from "./pages/AgendaDisplay";
+
 const ProtectedRoutes = () => (
   <UnitProvider>
     <Routes>
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/agenda" element={<Agenda />} />
+      <Route path="/agenda/display" element={<AgendaDisplay />} />
       <Route path="/clientes" element={<Clientes />} />
       <Route path="/profissionais" element={<Profissionais />} />
       <Route path="/servicos" element={<Servicos />} />

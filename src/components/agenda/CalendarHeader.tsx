@@ -1,6 +1,7 @@
-import { ChevronLeft, ChevronRight, Plus, Calendar, Zap, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Calendar, Zap, RefreshCw, Tv, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Barber } from "@/hooks/useBarbers";
@@ -19,6 +20,8 @@ interface CalendarHeaderProps {
   onQuickService: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  isCompactMode?: boolean;
+  onToggleCompactMode?: () => void;
 }
 
 export function CalendarHeader({
@@ -33,7 +36,12 @@ export function CalendarHeader({
   onQuickService,
   onRefresh,
   isRefreshing,
+  isCompactMode,
+  onToggleCompactMode,
 }: CalendarHeaderProps) {
+  const handleOpenDisplay = () => {
+    window.open("/agenda/display", "_blank", "noopener,noreferrer");
+  };
   const navigate = (direction: "prev" | "next") => {
     const isNext = direction === "next";
     switch (view) {
@@ -129,6 +137,28 @@ export function CalendarHeader({
             ))}
           </SelectContent>
         </Select>
+
+        {view !== "month" && onToggleCompactMode && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" onClick={onToggleCompactMode}>
+                {isCompactMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isCompactMode ? "Modo normal (com scroll)" : "Modo compacto (caber na tela)"}
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline" size="icon" onClick={handleOpenDisplay}>
+              <Tv className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Abrir em TV/Monitor</TooltipContent>
+        </Tooltip>
 
         <Button variant="outline" onClick={onQuickService}>
           <Zap className="h-4 w-4 mr-2" />

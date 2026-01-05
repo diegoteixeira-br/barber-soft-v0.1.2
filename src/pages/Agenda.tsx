@@ -33,6 +33,10 @@ export default function Agenda() {
   const [view, setView] = useState<CalendarViewType>("week");
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"calendar" | "history">("calendar");
+  const [isCompactMode, setIsCompactMode] = useState(() => {
+    const saved = localStorage.getItem("agenda-compact-mode");
+    return saved === "true";
+  });
   
   // Modal states
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -41,6 +45,14 @@ export default function Agenda() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [initialSlotDate, setInitialSlotDate] = useState<Date | undefined>();
   const [initialSlotBarberId, setInitialSlotBarberId] = useState<string | undefined>();
+
+  const handleToggleCompactMode = () => {
+    setIsCompactMode(prev => {
+      const newValue = !prev;
+      localStorage.setItem("agenda-compact-mode", String(newValue));
+      return newValue;
+    });
+  };
 
   // Calculate date range based on view
   const dateRange = useMemo(() => {
@@ -193,6 +205,8 @@ export default function Agenda() {
               onQuickService={() => setIsQuickServiceModalOpen(true)}
               onRefresh={() => refetchAppointments()}
               isRefreshing={appointmentsFetching}
+              isCompactMode={isCompactMode}
+              onToggleCompactMode={handleToggleCompactMode}
             />
 
             {isLoading ? (
@@ -213,6 +227,7 @@ export default function Agenda() {
                     openingTime={businessSettings?.opening_time || undefined}
                     closingTime={businessSettings?.closing_time || undefined}
                     timezone={currentUnit?.timezone || undefined}
+                    isCompactMode={isCompactMode}
                   />
                 )}
                 {view === "day" && (
@@ -226,6 +241,7 @@ export default function Agenda() {
                     openingTime={businessSettings?.opening_time || undefined}
                     closingTime={businessSettings?.closing_time || undefined}
                     timezone={currentUnit?.timezone || undefined}
+                    isCompactMode={isCompactMode}
                   />
                 )}
                 {view === "month" && (
