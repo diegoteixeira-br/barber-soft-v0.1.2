@@ -123,12 +123,12 @@ export function CalendarDayView({
     <div 
       ref={containerRef}
       data-calendar-day-container
-      className={`flex-1 ${isCompactMode ? 'overflow-hidden' : 'overflow-auto'}`}
+      className="flex-1 flex flex-col overflow-hidden"
     >
       <div className={`min-w-[600px] ${activeBarbers.length > 3 ? "min-w-[900px]" : ""} h-full flex flex-col`}>
-        {/* Header with barbers */}
+        {/* Header with barbers - FIXED */}
         <div 
-          className="grid border-b border-border sticky top-0 bg-card z-10 shrink-0" 
+          className="grid border-b border-border bg-card z-10 shrink-0" 
           style={{ gridTemplateColumns: `80px repeat(${activeBarbers.length}, 1fr)`, height: HEADER_HEIGHT }}
         >
           <div className="p-3 text-center border-r border-border flex flex-col items-center justify-center">
@@ -150,71 +150,73 @@ export function CalendarDayView({
           ))}
         </div>
 
-        {/* Time slots */}
-        <div className={`grid relative ${isCompactMode ? 'flex-1' : ''}`} style={{ gridTemplateColumns: `80px repeat(${activeBarbers.length}, 1fr)` }}>
-          {/* Current time indicator - spans across all columns */}
-          {showTimeIndicator && (
-            <div
-              className="absolute left-0 right-0 z-20 pointer-events-none"
-              style={{ top: `${timeIndicatorPosition}px` }}
-            >
-              <div className="relative flex items-center">
-                <div className="absolute left-[68px] w-3 h-3 bg-red-500 rounded-full shadow-sm" />
-                <div className="ml-[80px] flex-1 h-0.5 bg-red-500" />
-              </div>
-            </div>
-          )}
-
-          {/* Time column */}
-          <div className="border-r border-border">
-            {HOURS.map(hour => (
+        {/* Time slots - SCROLLABLE */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid relative" style={{ gridTemplateColumns: `80px repeat(${activeBarbers.length}, 1fr)` }}>
+            {/* Current time indicator - spans across all columns */}
+            {showTimeIndicator && (
               <div
-                key={hour}
-                className={`border-b border-border flex items-start justify-end pr-2 pt-1 ${
-                  isWithinBusinessHours(hour) ? "bg-blue-100/40 dark:bg-blue-900/20" : ""
-                }`}
-                style={{ height: hourHeight }}
+                className="absolute left-0 right-0 z-20 pointer-events-none"
+                style={{ top: `${timeIndicatorPosition}px` }}
               >
-                <span className="text-sm text-muted-foreground">
-                  {String(hour).padStart(2, "0")}:00
-                </span>
+                <div className="relative flex items-center">
+                  <div className="absolute left-[68px] w-3 h-3 bg-red-500 rounded-full shadow-sm" />
+                  <div className="ml-[80px] flex-1 h-0.5 bg-red-500" />
+                </div>
+              </div>
+            )}
+
+            {/* Time column */}
+            <div className="border-r border-border">
+              {HOURS.map(hour => (
+                <div
+                  key={hour}
+                  className={`border-b border-border flex items-start justify-end pr-2 pt-1 ${
+                    isWithinBusinessHours(hour) ? "bg-blue-100/40 dark:bg-blue-900/20" : ""
+                  }`}
+                  style={{ height: DEFAULT_HOUR_HEIGHT }}
+                >
+                  <span className="text-sm text-muted-foreground">
+                    {String(hour).padStart(2, "0")}:00
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Barber columns */}
+            {activeBarbers.map(barber => (
+              <div key={barber.id} className="border-r border-border last:border-r-0">
+                {HOURS.map(hour => {
+                  const slotAppointments = appointmentsByBarberAndHour[barber.id]?.[hour] || [];
+                  const slotDate = setMinutes(setHours(currentDate, hour), 0);
+                  const withinHours = isWithinBusinessHours(hour);
+
+                  return (
+                    <div
+                      key={hour}
+                      className={`border-b border-border p-1 cursor-pointer hover:bg-muted/30 transition-colors ${
+                        withinHours 
+                          ? "bg-blue-100/40 dark:bg-blue-900/20" 
+                          : ""
+                      } ${today && withinHours ? "bg-blue-100/50 dark:bg-blue-900/30" : ""}`}
+                      style={{ height: DEFAULT_HOUR_HEIGHT }}
+                      onClick={() => onSlotClick(slotDate, barber.id)}
+                    >
+                      <div className="space-y-1 overflow-hidden h-full">
+                        {slotAppointments.map(apt => (
+                          <CalendarEvent
+                            key={apt.id}
+                            appointment={apt}
+                            onClick={() => onAppointmentClick(apt)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
-
-          {/* Barber columns */}
-          {activeBarbers.map(barber => (
-            <div key={barber.id} className="border-r border-border last:border-r-0">
-              {HOURS.map(hour => {
-                const slotAppointments = appointmentsByBarberAndHour[barber.id]?.[hour] || [];
-                const slotDate = setMinutes(setHours(currentDate, hour), 0);
-                const withinHours = isWithinBusinessHours(hour);
-
-                return (
-                  <div
-                    key={hour}
-                    className={`border-b border-border p-1 cursor-pointer hover:bg-muted/30 transition-colors ${
-                      withinHours 
-                        ? "bg-blue-100/40 dark:bg-blue-900/20" 
-                        : ""
-                    } ${today && withinHours ? "bg-blue-100/50 dark:bg-blue-900/30" : ""}`}
-                    style={{ height: hourHeight }}
-                    onClick={() => onSlotClick(slotDate, barber.id)}
-                  >
-                    <div className="space-y-1 overflow-hidden h-full">
-                      {slotAppointments.map(apt => (
-                        <CalendarEvent
-                          key={apt.id}
-                          appointment={apt}
-                          onClick={() => onAppointmentClick(apt)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
         </div>
       </div>
     </div>
