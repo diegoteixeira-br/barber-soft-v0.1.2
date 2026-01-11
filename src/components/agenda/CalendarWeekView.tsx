@@ -133,12 +133,12 @@ export function CalendarWeekView({
     <div 
       ref={containerRef}
       data-calendar-container
-      className={`flex-1 ${isCompactMode ? 'overflow-hidden' : 'overflow-auto'}`}
+      className="flex-1 flex flex-col overflow-hidden"
     >
       <div className="min-w-[800px] h-full flex flex-col">
-        {/* Header with days */}
+        {/* Header with days - FIXED */}
         <div 
-          className="grid grid-cols-8 border-b border-border sticky top-0 bg-card z-10 shrink-0" 
+          className="grid grid-cols-8 border-b border-border bg-card z-10 shrink-0" 
           style={{ height: HEADER_HEIGHT }}
         >
           <div className="p-2 text-center text-xs text-muted-foreground border-r border-border flex items-center justify-center">
@@ -161,75 +161,77 @@ export function CalendarWeekView({
           ))}
         </div>
 
-        {/* Time slots */}
-        <div className={`grid grid-cols-8 relative ${isCompactMode ? 'flex-1' : ''}`}>
-          {/* Time column */}
-          <div className="border-r border-border">
-            {HOURS.map(hour => (
-              <div
-                key={hour}
-                className={`border-b border-border p-1 text-xs text-muted-foreground text-right pr-2 flex items-start justify-end ${
-                  isWithinBusinessHours(hour) ? "bg-blue-100/40 dark:bg-blue-900/20" : ""
-                }`}
-                style={{ height: hourHeight }}
-              >
-                {String(hour).padStart(2, "0")}:00
-              </div>
-            ))}
-          </div>
+        {/* Time slots - SCROLLABLE */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-8 relative">
+            {/* Time column */}
+            <div className="border-r border-border">
+              {HOURS.map(hour => (
+                <div
+                  key={hour}
+                  className={`border-b border-border p-1 text-xs text-muted-foreground text-right pr-2 flex items-start justify-end ${
+                    isWithinBusinessHours(hour) ? "bg-blue-100/40 dark:bg-blue-900/20" : ""
+                  }`}
+                  style={{ height: DEFAULT_HOUR_HEIGHT }}
+                >
+                  {String(hour).padStart(2, "0")}:00
+                </div>
+              ))}
+            </div>
 
-          {/* Day columns */}
-          {days.map((day) => {
-            const dayKey = format(day, "yyyy-MM-dd");
-            const isDayToday = isToday(day);
-            
-            return (
-              <div key={day.toISOString()} className="border-r border-border last:border-r-0 relative">
-                {/* Current time indicator - only on today's column */}
-                {isDayToday && showTimeIndicator && (
-                  <div
-                    className="absolute left-0 right-0 z-20 pointer-events-none"
-                    style={{ top: `${timeIndicatorPosition}px` }}
-                  >
-                    <div className="relative flex items-center">
-                      <div className="absolute -left-1.5 w-3 h-3 bg-red-500 rounded-full shadow-sm" />
-                      <div className="w-full h-0.5 bg-red-500" />
-                    </div>
-                  </div>
-                )}
-                
-                {HOURS.map(hour => {
-                  const slotAppointments = appointmentsByDayAndHour[dayKey]?.[hour] || [];
-                  const slotDate = setMinutes(setHours(day, hour), 0);
-                  const withinHours = isWithinBusinessHours(hour);
-
-                  return (
+            {/* Day columns */}
+            {days.map((day) => {
+              const dayKey = format(day, "yyyy-MM-dd");
+              const isDayToday = isToday(day);
+              
+              return (
+                <div key={day.toISOString()} className="border-r border-border last:border-r-0 relative">
+                  {/* Current time indicator - only on today's column */}
+                  {isDayToday && showTimeIndicator && (
                     <div
-                      key={hour}
-                      className={`border-b border-border p-0.5 cursor-pointer hover:bg-muted/30 transition-colors ${
-                        withinHours 
-                          ? "bg-blue-100/40 dark:bg-blue-900/20" 
-                          : ""
-                      } ${isDayToday && withinHours ? "bg-blue-100/50 dark:bg-blue-900/30" : ""}`}
-                      style={{ height: hourHeight }}
-                      onClick={() => onSlotClick(slotDate)}
+                      className="absolute left-0 right-0 z-20 pointer-events-none"
+                      style={{ top: `${timeIndicatorPosition}px` }}
                     >
-                      <div className="space-y-0.5 overflow-hidden h-full">
-                        {slotAppointments.map(apt => (
-                          <CalendarEvent
-                            key={apt.id}
-                            appointment={apt}
-                            onClick={() => onAppointmentClick(apt)}
-                            ultraCompact={showAllBarbers}
-                          />
-                        ))}
+                      <div className="relative flex items-center">
+                        <div className="absolute -left-1.5 w-3 h-3 bg-red-500 rounded-full shadow-sm" />
+                        <div className="w-full h-0.5 bg-red-500" />
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            );
-          })}
+                  )}
+                  
+                  {HOURS.map(hour => {
+                    const slotAppointments = appointmentsByDayAndHour[dayKey]?.[hour] || [];
+                    const slotDate = setMinutes(setHours(day, hour), 0);
+                    const withinHours = isWithinBusinessHours(hour);
+
+                    return (
+                      <div
+                        key={hour}
+                        className={`border-b border-border p-0.5 cursor-pointer hover:bg-muted/30 transition-colors ${
+                          withinHours 
+                            ? "bg-blue-100/40 dark:bg-blue-900/20" 
+                            : ""
+                        } ${isDayToday && withinHours ? "bg-blue-100/50 dark:bg-blue-900/30" : ""}`}
+                        style={{ height: DEFAULT_HOUR_HEIGHT }}
+                        onClick={() => onSlotClick(slotDate)}
+                      >
+                        <div className="space-y-0.5 overflow-hidden h-full">
+                          {slotAppointments.map(apt => (
+                            <CalendarEvent
+                              key={apt.id}
+                              appointment={apt}
+                              onClick={() => onAppointmentClick(apt)}
+                              ultraCompact={showAllBarbers}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
