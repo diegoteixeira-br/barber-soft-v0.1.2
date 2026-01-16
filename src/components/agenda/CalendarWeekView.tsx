@@ -93,21 +93,27 @@ export function CalendarWeekView({
     return Array.from({ length: 14 }, (_, i) => i + 7);
   }, [isCompactMode, minHour, maxHour]);
 
-  // Calculate dynamic height for compact mode
+  // Calculate dynamic height for compact mode and scrollbar width
   const [containerHeight, setContainerHeight] = useState(0);
+  const [scrollbarWidth, setScrollbarWidth] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     if (!containerRef.current) return;
     
-    const updateHeight = () => {
+    const updateDimensions = () => {
       if (containerRef.current) {
         setContainerHeight(containerRef.current.clientHeight);
       }
+      if (scrollContainerRef.current) {
+        const width = scrollContainerRef.current.offsetWidth - scrollContainerRef.current.clientWidth;
+        setScrollbarWidth(width);
+      }
     };
     
-    updateHeight();
-    const observer = new ResizeObserver(updateHeight);
+    updateDimensions();
+    const observer = new ResizeObserver(updateDimensions);
     observer.observe(containerRef.current);
     
     return () => observer.disconnect();
@@ -180,7 +186,7 @@ export function CalendarWeekView({
         {/* Header with days - FIXED */}
         <div 
           className="grid grid-cols-8 border-b border-border bg-card z-10 shrink-0" 
-          style={{ height: HEADER_HEIGHT }}
+          style={{ height: HEADER_HEIGHT, paddingRight: scrollbarWidth }}
         >
           <div className="p-2 text-center text-xs text-muted-foreground border-r border-border flex items-center justify-center">
             Horário
@@ -216,7 +222,7 @@ export function CalendarWeekView({
         </div>
 
         {/* Time slots - SCROLLABLE */}
-        <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-scroll overflow-x-hidden min-h-0 overscroll-contain">
           <div className="grid grid-cols-8 relative">
             {/* Time column */}
             <div className="border-r border-border">
@@ -224,7 +230,7 @@ export function CalendarWeekView({
                 <div
                   key={hour}
                   className="border-b border-border text-xs text-muted-foreground text-right pr-2 flex items-start justify-end pt-1"
-                  style={{ height: DEFAULT_HOUR_HEIGHT, boxSizing: "border-box" }}
+                  style={{ height: DEFAULT_HOUR_HEIGHT }}
                 >
                   {String(hour).padStart(2, "0")}:00
                 </div>
@@ -278,7 +284,7 @@ export function CalendarWeekView({
                                   : ""
                               } ${isDayToday && withinHours ? "bg-blue-100/50 dark:bg-blue-900/30" : ""}`
                         }`}
-                        style={{ height: DEFAULT_HOUR_HEIGHT, boxSizing: "border-box" }}
+                        style={{ height: DEFAULT_HOUR_HEIGHT }}
                         onClick={() => !isClosed && onSlotClick(slotDate)}
                       >
                         <div className="space-y-0.5 overflow-hidden h-full">
